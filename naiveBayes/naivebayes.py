@@ -6,7 +6,7 @@ import nltk
 from sklearn import cross_validation
 from nltk.probability import *
 
-train = pd.read_csv("../DataSet/train.csv")                                       #load train.csv as a pandas frame
+train = pd.read_csv("../data/train.csv")                                       #load train.csv as a pandas frame
 
 totalnum = len(train)
 print "Number of Rows: " + str(len(train))                                  #prints the total number of rows
