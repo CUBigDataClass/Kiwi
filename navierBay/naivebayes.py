@@ -65,10 +65,10 @@ classifier = nltk.NaiveBayesClassifier.train(labeled_f,estimator=SimpleGoodTurin
 testDat = d[0:1000]
 print nltk.classify.accuracy(classifier,testDat)  
 #print classifier.show_most_informative_features()        
-def lidstone(gamma):
-    return lambda fd, bins: LidstoneProbDist(fd, gamma, bins)
-est = lidstone(0.1)
-classifier = nltk.NaiveBayesClassifier.train(labeled_f,estimator=est)
+#def lidstone(gamma):
+#    return lambda fd, bins: LidstoneProbDist(fd, gamma, bins)
+#est = lidstone(0.1)
+#classifier = nltk.NaiveBayesClassifier.train(labeled_f,estimator=est)
 
 
 #cv = cross_validation.KFold(len(labeled_f),n_folds=10,indices=True,shuffle=False, random_state=None, k=None)
