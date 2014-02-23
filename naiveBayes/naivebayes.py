@@ -59,7 +59,7 @@ d = [(dict([(colname,row[i])
 
 labeled_f = d
 #gt = lambda fd, bins: SimpleGoodTuringProbDist(fd, bins=1e5)
-classifier = nltk.NaiveBayesClassifier.train(labeled_f,estimator=SimpleGoodTuringProbDist)
+classifier = nltk.NaiveBayesClassifier.train(labeled_f,estimator=MLEProbDist)
 #estimator choices:ELEProbDist, LaplaceProbDist,LidstoneProbDist,MLEProbDist,ConditionalProbDist,
 
 testDat = d[0:1000]
@@ -70,10 +70,16 @@ print nltk.classify.accuracy(classifier,testDat)
 #est = lidstone(0.1)
 #classifier = nltk.NaiveBayesClassifier.train(labeled_f,estimator=est)
 
+cv = cross_validation.KFold(n=len(labeled_f),n_folds=10,indices=True,shuffle=True, random_state=None, k=None)
 
-#cv = cross_validation.KFold(len(labeled_f),n_folds=10,indices=True,shuffle=False, random_state=None, k=None)
-
-#for traincv, testcv in cv:
+scores=[]
+for traincv, testcv in cv:
 #    classif = nltk.NaiveBayesClassifier.train(labeled_f[traincv[0]:traincv[len(traincv)-1]],
-#                                                estimator=SimpleGoodTuringProbDist)
+#                                               estimator=MLEProbDist)
 #    print 'accuracy:', nltk.classify.accuracy(classif, labeled_f[testcv[0]:testcv[len(testcv)-1]])
+    classif = nltk.NaiveBayesClassifier.train([labeled_f[i] for i in traincv], estimator = LaplaceProbDist)
+    score = nltk.classify.accuracy(classif, [labeled_f[i] for i in testcv])
+    scores.append(score)
+    print 'accuracy:',  score 
+
+print sum(scores)/len(scores)
