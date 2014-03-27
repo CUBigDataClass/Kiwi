@@ -1,0 +1,10 @@
+CHANGELOG: project website
+
+---------------------------------
+02/27/2014
+- Added settings and wsgi config
+- TODO (existing files):
+	-- change settings/database when available
+	-- redirect to current templates.py
+- TODO (new files):
+	-- create models, admin and views
