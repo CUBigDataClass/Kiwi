@@ -113,7 +113,7 @@ if __name__=='__main__':
 #	print Xtrain.values[1]
 	
 	print "# of " + yt.name +  " is " + str(len(yt.unique()))  
-#	yt = encodeAsInt(yt)
+	yt = encodeAsInt(yt)
 #	print list(yt)
 
 #le = preprocessing.LabelEncoder()
@@ -123,12 +123,19 @@ if __name__=='__main__':
 #	mnb = BernoulliNB(alpha=0.5,binarize=0.0) 
 #	mnb = BernoulliNB(alpha=0.1, binarize=1.0, class_prior=None, fit_prior=True)
 #	bnb = BernoulliNB(alpha=0.5, fit_prior=True)
-	bnb = BNClassifier.BNB()
+	bnb = BNClassifier.BNB(alpha=0.0)
 
 #	mnb = BernoulliNB(alpha=0.1) 
 	
 	bnb.fit(Xtrain.values, yt.values)
-	print bnb.predict(Xtrain)
+	ytp =  bnb.predict(Xtrain.values)
+
+	#print [(yt[i],ytp[i]) for i in xrange(len(yt))]	
+	acc = (1 - (1. / len(ytp) * sum( yt != ytp )))
+	print 'prediction accuracy: %.4f' % acc
+
+
+
 #gt = lambda fd, bins: SimpleGoodTuringProbDist(fd, bins=1e5)
 
 #classifier = nltk.NaiveBayesClassifier.train(labeled_f,estimator=MLEProbDist)

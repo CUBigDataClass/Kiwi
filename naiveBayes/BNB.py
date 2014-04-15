@@ -41,14 +41,16 @@ def log(x):
 ### bernoulli classifier
 ##################################################
 class BNB:
-	def __init__(self,alpha=0.0):
-		self.freqdic=[]
-		self.alpha = alpha
-		self.fn = 0
-		self.cn = 0
-		self.isDataFit = False
+	def __init__(self,alpha=1.0):
+		self.alpha = alpha # smoothing parameter
+		self.fn = 0 # num of features
+		self.ln = 0 # num of unique classes
+		self.isDataFit = False # where the classifier is fitted
 		self.unkfeature = '<UNK_F>' # for unknown words
-		self.unklabel = '<UNK_L>' # for unknown words
+		self.unklabel = '<UNK_L>' # for unknown labels, unused now
+		self.labels = [] # list fot unique labels
+		self.dictlist = {} # diclist for P(feature|given label)
+		self.pidic = {} # prior dic for P(label)
 
 	##################################################
 	## init prior matrix with normalization
@@ -84,7 +86,6 @@ class BNB:
 		# smoothing
 		####################
 		fnum = len(np.unique(features))
-		print fnum
 		for label in classdic:
 			denom = (float(labelcount[label]) + self.alpha * float(fnum))
 			for feature in classdic[label]:
@@ -102,17 +103,17 @@ class BNB:
 	def fit(self,features,labels):
 		# num of features
 		self.isDataFit = True
-		self.datanum, self.fn = features.shape
+		datanum, self.fn = features.shape
 		
 		####################
 		## check the size of the data
 		####################
-		if (self.datanum != len(labels)):
+		if (datanum != len(labels)):
 			print "length of labels not equal to number of data"
 			sys.exit()
 
 		self.labels, indices = np.unique(labels,return_inverse=True)
-		self.cn = len(self.labels)
+		self.ln = len(self.labels)
 
 		####################
 		#### generate prior matrix
@@ -128,15 +129,59 @@ class BNB:
 
 		#	print self.dictlist[i][self.labels[1]]
 
+	def readTagProb(self,label,tag):
+		val =  log(self.pidic[label])
+		for j in xrange(len(tag)):
+			item = tag[j]
+			if item in self.dictlist[j][label]:
+				val += log(self.dictlist[j][label][item])
+			else:
+				val += log(self.dictlist[j][label][self.unkfeature])
+
+		return val
+
+	##################################################
+	## predict a single feature
+	##################################################
+	def predictOne(self,tag):
+		maxprob = log(0.0)
+		maxlabel = []
+		for k in xrange(self.ln):
+			label = self.labels[k]
+			cutprob =  self.readTagProb(label,tag)
+
+			if maxprob < cutprob:
+				maxprob = cutprob
+				maxlabel = label
+
+		return maxlabel
+
+	##################################################
+	## predict features
+	##################################################
 	def predict(self,feature):
 		if self.isDataFit:
-			return 1.0
+			dataLen, numTF = feature.shape
+### check whether the feature is the same as training set
+			if ( numTF != self.fn):
+				print "Error: Size of test feature is different from training set!"
+				sys.exit()
+
+			pLabel = np.empty(dataLen,dtype = type([self.labels[0]]))
+			dicLabel = {}
+			for i in xrange(dataLen):
+				tag = feature[i,:]
+				label = self.predictOne(tag)
+				pLabel[i] = label
+
+			return pLabel
 
 		else:
 			print "Classes not fit, cannot predict!"
 			sys.exit()
 
 	def score(self,features,yt):
+		yt = np.asarray(yt)
 		ytp = self.predict(features)
 		acc = (1 - (1. / len(ytp) * sum( yt != ytp )))
 		print 'prediction accuracy: %.4f' % acc
