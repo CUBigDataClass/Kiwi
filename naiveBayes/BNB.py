@@ -103,13 +103,22 @@ class BNB:
 	def fit(self,features,labels):
 		# num of features
 		self.isDataFit = True
-		datanum, self.fn = features.shape
+		#features = np.asarray(features)
+		#labels = np.asarray(labels)
+		if (np.ndim(features) == 1):
+			datanum = features.shape[0]
+			self.fn = 1
+			features = np.reshape(features,(datanum,1))
+		else:
+			datanum, self.fn = features.shape
+
+		print datanum, self.fn
 		
 		####################
 		## check the size of the data
 		####################
 		if (datanum != len(labels)):
-			print "length of labels not equal to number of data"
+			print "Error: length of labels not equal to number of data"
 			sys.exit()
 
 		self.labels, indices = np.unique(labels,return_inverse=True)
@@ -160,25 +169,31 @@ class BNB:
 	## predict features
 	##################################################
 	def predict(self,feature):
-		if self.isDataFit:
-			dataLen, numTF = feature.shape
-### check whether the feature is the same as training set
-			if ( numTF != self.fn):
-				print "Error: Size of test feature is different from training set!"
-				sys.exit()
-
-			pLabel = np.empty(dataLen,dtype = type([self.labels[0]]))
-			dicLabel = {}
-			for i in xrange(dataLen):
-				tag = feature[i,:]
-				label = self.predictOne(tag)
-				pLabel[i] = label
-
-			return pLabel
-
-		else:
+		if not self.isDataFit:
 			print "Classes not fit, cannot predict!"
 			sys.exit()
+
+		#feature = np.asarray(feature)
+		if (np.ndim(feature) == 1):
+			dataLen = feature.shape[0]
+			numTF = 1
+			feature = np.reshape(feature,(dataLen,1))
+		else:
+			dataLen, numTF = feature.shape
+### check whether the feature is the same as training set
+		if ( numTF != self.fn):
+			print "Error: Size of test feature is different from training set!"
+			sys.exit()
+
+		pLabel = np.empty(dataLen,dtype = type([self.labels[0]]))
+		dicLabel = {}
+		for i in xrange(dataLen):
+			tag = feature[i,:]
+			label = self.predictOne(tag)
+			pLabel[i] = label
+
+		return pLabel
+
 
 	def score(self,features,yt):
 		yt = np.asarray(yt)

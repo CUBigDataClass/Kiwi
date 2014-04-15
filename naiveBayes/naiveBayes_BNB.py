@@ -2,6 +2,7 @@
 
 import pandas as pd                                                         #import pandas
 import numpy as np                                                          #import numpy
+import sys
 #import nltk
 
 from sklearn import cross_validation
@@ -10,6 +11,8 @@ from sklearn import preprocessing
 from sklearn.feature_extraction.text import CountVectorizer
 #from nltk.probability import *
 import BNB as BNClassifier
+import re
+import timeit 
 
 def printInfo(train):
 	totalnum = len(train)
@@ -17,11 +20,41 @@ def printInfo(train):
 	print "Number of Unique Users: " + str(len(train['user'].unique()))         #prints the number of unique users...
 	print "Number of Unique SKU: " + str(len(train['sku'].unique()))
 	print "Number of query: " + str(len(train['query'].unique()))
-#print "Number of Unique Categories: " + str(len(train['category'].unique()))
+	print "Number of Unique Categories: " + str(len(train['category'].unique()))
 
 def preprocessQuery(train):
+##### change all the letters to upper case
 	dat = train['query'].apply(lambda x: x.upper())
 	dat.name = 'query'
+
+	for ind, item in enumerate(dat):
+		#litem = item.split()
+		#litem.sort()
+		#llitem = re.findall(r"[a-zA-Z]+|\d+", item)
+		#llitem = re.findall(r"[a-zA-Z0-9]+",item)
+
+		r = re.compile("[0-9]+[a-zA-Z]+[0-9]+|[a-zA-Z]+|[0-9]+")
+		llitem = r.findall(item)
+		llitem.sort()
+		ix = -1
+		i360 = -1
+		for i, c in enumerate(llitem):
+			if c == 'XBOX':
+				ix = i
+			if c == '360':
+				i360 = i
+
+		indlist = []
+		indlist = [i for i in xrange(len(llitem)) if i != ix and i != i360]
+
+		ss = ' '.join(llitem[i] for i in indlist)
+		if (i360 != -1):
+			ss = ss + ' XBOX' + ' 360'
+		elif (ix != -1):
+			ss = ss + ' XBOX'
+		#ss = ' '.join(ss,)
+		print ss
+		dat[ind] = ss
 	return dat
 
 def nClassify(x,values):
@@ -46,8 +79,6 @@ def nDivide(dat,n):
 # binning the data into numbins bins
 ####################
 def binDivide(dat,numbins):
-	print dat.min()
-	print dat.max()
 	bins = np.linspace(dat.min(),dat.max(),numbins+1)
 	perc = bins[1:]
 	datD = dat.apply(nClassify, values = perc)         
@@ -58,7 +89,7 @@ def preprocessTime(train):
 	datQueryT = pd.to_datetime(train['query_time'])
 	datDiff = (datClickT - datQueryT).apply(lambda x: x / np.timedelta64(1, 's'))  # change date time to float
 	#datDiff = datDiff / 300.0   # normalize to 1
-	numbins = 10
+	numbins = 100
 	#(datTime,vs) = nDivide(datDiff,numbins) # divide into equal bins
 	(datTime,vs) = binDivide(datDiff,numbins)
 	datTime.name = 'time'
@@ -86,21 +117,27 @@ def encodeAsInt(dat):
 
 
 if __name__=='__main__':
+
+	start = timeit.default_timer()
+
 	train = pd.read_csv("../data/train.csv")                                       #load train.csv as a pandas frame
 
+	train = train.iloc[:40000,:]
 	printInfo(train)
 
-	datUser = train['user']
-	datSKU = train['sku']
-	datCat = train['category']
+#	datUser = train['user']
+#	datSKU = train['sku']
+#	datCat = train['category']
 
 	print "preprocessing data"
-	datTime = preprocessTime(train)
-	datQuery = preprocessQuery(train)
+	train['time'] = preprocessTime(train)
+	train['query'] = preprocessQuery(train)
 
-	features = ['user','time','query']
+	#features = ['user','time','query']
+	features = ['category','time','query']
 	label = 'sku'
-	Xt = pd.concat([datUser,datTime,datQuery],axis=1)
+	#Xt = pd.concat([datUser,datTime,datQuery],axis=1)
+	Xt = pd.concat([train[features]],axis=1)
 	yt = train[label]
 
 	Xtrain = Xt.copy()
@@ -123,7 +160,7 @@ if __name__=='__main__':
 #	mnb = BernoulliNB(alpha=0.5,binarize=0.0) 
 #	mnb = BernoulliNB(alpha=0.1, binarize=1.0, class_prior=None, fit_prior=True)
 #	bnb = BernoulliNB(alpha=0.5, fit_prior=True)
-	bnb = BNClassifier.BNB(alpha=0.0)
+	bnb = BNClassifier.BNB(alpha=0.1)
 
 #	mnb = BernoulliNB(alpha=0.1) 
 	
@@ -134,6 +171,8 @@ if __name__=='__main__':
 	acc = (1 - (1. / len(ytp) * sum( yt != ytp )))
 	print 'prediction accuracy: %.4f' % acc
 
+	stop = timeit.default_timer()
+	print 'time is', stop - start
 
 
 #gt = lambda fd, bins: SimpleGoodTuringProbDist(fd, bins=1e5)
