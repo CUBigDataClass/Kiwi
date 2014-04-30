@@ -107,7 +107,6 @@ def getFeatureSet(dat,n=5):
 	sku_info['pop_skus'] = sku_above
 	sku_info['num_features'] = num_features
 	sku_info['map_vocab'] = map_vocab
-	#print sku_info,fsets,y
 
 	return (sku_info,fsets,y)
 
@@ -142,13 +141,15 @@ def main():
 ####################
 ## feature selections
 ####################
-	cat_info = dict.fromkeys(cat_list,{})
+	cat_info = dict()
 	for cat in cat_list:
 		#print "preprocessing data"
 		catdat = preprocess(gcat_dic[cat])
 
 		#print "feature selections"
 		sku_info,fset,skus = getFeatureSet(catdat)
+
+		cat_info[cat] = {}
 		cat_info[cat]['sku_info'] = sku_info
 	
 ##### method 1 #####
@@ -173,22 +174,24 @@ def main():
 ## predict
 ####################
 ## preprocess test data
+	print cat_info
 	print "read test data"
 	dataroot = "../data/test_part.csv"
 	testdat = groupByCat(dataroot)
 
 ## predict by nb_dic
 	for cat in testdat:
+		catdat = preprocess(testdat[cat])
 		try:
-			catdat = preprocess(testdat[cat])
-			catdic = cat_info[cat]["sku_info"]
-			testfsets = get_test_featuresets(catdat,catdic)
-			cls = cat_info[cat]['cls']
-			yt = cls.predict(testfsets)
-			print yt
+			catdic = cat_info[cat]['sku_info']
 		except KeyError:
 			print "Category %s is unseen!" % str(cat)
 			sys.exit()
+
+		testfsets = get_test_featuresets(catdat,catdic)
+		cls = cat_info[cat]['cls']
+		yt = cls.predict(testfsets)
+		print yt
 		
 
 ####################
