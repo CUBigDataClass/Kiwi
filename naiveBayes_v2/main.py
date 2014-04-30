@@ -121,7 +121,7 @@ def get_test_featuresets(catdat,skuinfo):
 		for word in words:
 			try:
 				testfsets[j,map_vocab[word]] = 1
-			except:
+			except KeyError:
 				continue
 	return testfsets
 ##################################################
@@ -131,6 +131,7 @@ def main():
 	start = timeit.default_timer()
 	print "read train data"
 	dataroot = "../data/train_part.csv"
+
 	gcat_dic = groupByCat(dataroot)
 
 	cat_list = gcat_dic.keys()
@@ -174,10 +175,11 @@ def main():
 ## predict
 ####################
 ## preprocess test data
-	print cat_info
 	print "read test data"
 	dataroot = "../data/test_part.csv"
 	testdat = groupByCat(dataroot)
+
+	print type(testdat)
 
 ## predict by nb_dic
 	for cat in testdat:
@@ -186,12 +188,32 @@ def main():
 			catdic = cat_info[cat]['sku_info']
 		except KeyError:
 			print "Category %s is unseen!" % str(cat)
+			raise KeyError
 			sys.exit()
 
 		testfsets = get_test_featuresets(catdat,catdic)
 		cls = cat_info[cat]['cls']
-		yt = cls.predict(testfsets)
-		print yt
+		yclasses =  cls.classes_
+		yall = cls.predict_proba(testfsets)
+		ysort = np.argsort(-yall)
+
+		n = 5
+		try:
+			ybest = ysort[:,:len(yclasses)] ## only one class
+		except IndexError:
+			try:
+				ybest = ysort[:,:n] ## get the most frequent n
+			except IndexError:
+				ybest = ysort # if ysort is shorter than n, get ysort
+		
+		yout = yclasses[ybest]
+		print yout,yout.shape
+		catdat['skus'] = pd.Series(catdat['query'].values,index=catdat.index)
+		for i in xrange(len(catdat)):
+			catdat['skus'].iloc[i] = yout[i]
+		#yt = cls.predict(testfsets)
+		print cat,yout
+		print catdat
 		
 
 ####################
