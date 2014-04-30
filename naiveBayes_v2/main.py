@@ -1,13 +1,17 @@
 #/usr/bin/python
 ##################################################
+import warnings
+with warnings.catch_warnings():
+	warnings.filterwarnings("ignore",category=DeprecationWarning)
 ## all the good packages
-import pandas as pd
+	import pandas as pd
+
 import numpy as np
 import sys
 from PreprocessData import preprocess
 import timeit
 from sklearn import naive_bayes
-import nltk
+#import nltk
 import collections
 from collections import defaultdict
 from operator import itemgetter, attrgetter
@@ -112,11 +116,9 @@ def get_test_featuresets(catdat,skuinfo):
 	map_vocab = skuinfo['map_vocab']
 	num_samples = len(catdat)
 
-	print "jere"
 	testfsets = np.zeros((num_samples,num_features),dtype=np.uint8)
 	for j in xrange(num_samples):
 		words = catdat['query'].iloc[j]
-		print words
 		for word in words:
 			try:
 				testfsets[j,map_vocab[word]] = 1
@@ -179,13 +181,11 @@ def main():
 	for cat in testdat:
 		try:
 			catdat = preprocess(testdat[cat])
-			print catdat
-			catdic = cat_info[cat]
-			print catdic
+			catdic = cat_info[cat]["sku_info"]
 			testfsets = get_test_featuresets(catdat,catdic)
-#			cls = cat_info[cat]['cls']
-#			yt = cls.predict(testfsets)
-#			print yt
+			cls = cat_info[cat]['cls']
+			yt = cls.predict(testfsets)
+			print yt
 		except KeyError:
 			print "Category %s is unseen!" % str(cat)
 			sys.exit()
