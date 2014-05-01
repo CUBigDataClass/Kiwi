@@ -16,6 +16,7 @@ import collections
 from collections import defaultdict
 from operator import itemgetter, attrgetter
 
+import bisect
 ##################################################
 ##
 ## function definitions
@@ -58,17 +59,21 @@ def groupByCat(dataroot):
 ####################
 ## get the feature sets
 ####################
-def getFeatureSet(dat,n=5):	
+def getFeatureSet(dat,topn=10,freq=20):	
 	## count frequency of sku
 
 ## choose the most frequent 5 skus
 	skugd = dat.groupby('sku').groups
 	sku_counts =  dat['sku'].value_counts()
 	sku_counts.sort(ascending=False)
+	thres = bisect.bisect(-sku_counts.values,-freq)
+	#thres = sum(sku_counts>freq)
 	sku_above = []
 
-	if len(sku_counts) < n:
-		n = len(sku_counts)
+	n = max([topn,thres])
+	n = min([n,len(sku_counts)])
+	#if len(sku_counts) < n:
+	#	n = len(sku_counts)
 	
 	for i in xrange(n):
 		sku_above.append(sku_counts.index[i])
@@ -76,19 +81,20 @@ def getFeatureSet(dat,n=5):
 	sku_dic = dict.fromkeys(sku_above,list)
 
 	wordlist = list()
+	extend = wordlist.extend
 	num_samples = 0
 	for sku in sku_above:
 		num_samples += len(skugd[sku])
 		queries = dat['query'][skugd[sku]].values.tolist()
 		sku_dic[sku] = queries
-		wordlist.extend(sum(queries,[]))
+		extend(sum(queries,[]))
 
 	wordlist = set(wordlist)
 
 	map_vocab = dict([item,i] for i,item in enumerate(wordlist))
 	num_features = len(wordlist)
 	fsets = np.zeros((num_samples,num_features),dtype=np.uint8)
-	y = np.zeros(num_samples)
+	y = np.zeros(num_samples,dtype=type(sku_above[0]))
 
 	j = 0
 	for sku in sku_dic:
@@ -104,7 +110,7 @@ def getFeatureSet(dat,n=5):
 			j += 1
 ####store the information
 	sku_info = dict()
-	sku_info['pop_skus'] = sku_above
+#	sku_info['pop_skus'] = sku_above
 	sku_info['num_features'] = num_features
 	sku_info['map_vocab'] = map_vocab
 
@@ -124,13 +130,101 @@ def get_test_featuresets(catdat,skuinfo):
 			except KeyError:
 				continue
 	return testfsets
+
+def predict_testdata(cat_info,dataroot):
+## input should be a data frame
+##  output is a list of popular skus in the right order
+	testdat = pd.read_csv(dataroot)
+	num_samples = len(testdat)
+	skulist = []
+
+	for i in xrange(num_samples):
+		dat = testdat.iloc[i:i+1] ## output should be a data frame
+		cat = dat['category'].iloc[0]
+		catdat = preprocess(dat)
+
+		try:
+			catdic = cat_info[cat]['sku_info']
+		except KeyError:
+			print "Category %s is unseen!" % str(cat)
+			raise KeyError
+
+		testfsets = get_test_featuresets(catdat,catdic)
+		cls = cat_info[cat]['cls']
+		yclasses =  cls.classes_
+		yall = cls.predict_proba(testfsets)
+		ysort = np.argsort(-yall)
+
+		n = 5
+		try:
+			ybest = ysort[:,:n] ## get the most frequent n
+		except IndexError:
+			try:
+				ybest = ysort[:,:len(yclasses)] ## only one class
+			except IndexError:
+				ybest = ysort # if ysort is shorter than n, get ysort
+		
+		yout = yclasses[ybest]
+		skulist.append(yout.flatten().tolist())
+	
+	return skulist
+
+
+#def predict_testdata_bycat(cat_info,dataroot):
+### input is dir for file
+###  output is a list of popular skus in the right order
+#	train = pd.read_csv(dataroot)
+#	num_samples = len(train)
+##	printInfo(train)
+#
+#	print "group by category"
+### dictionary of grouping categories
+#	grouped = train.groupby('category').groups
+#	testdat= dict.fromkeys(grouped.keys())
+#	
+#	for cat in grouped:
+#		testdat[cat] = train.ix[grouped[cat]].drop('category',axis=1)
+#
+#	skulist = [[]] * num_samples
+#	for cat in testdat:
+#		catdat = preprocess(testdat[cat])
+#		try:
+#			catdic = cat_info[cat]['sku_info']
+#		except KeyError:
+#			print "Category %s is unseen!" % str(cat)
+#			raise KeyError
+#			sys.exit()
+#
+#		testfsets = get_test_featuresets(catdat,catdic)
+#		cls = cat_info[cat]['cls']
+#		yclasses =  cls.classes_
+#		yall = cls.predict_proba(testfsets)
+#		ysort = np.argsort(-yall)
+#
+#		n = 5
+#		try:
+#			ybest = ysort[:,:n] ## get the most frequent n
+#		except IndexError:
+#			try:
+#				ybest = ysort[:,:len(yclasses)] ## only one class
+#			except IndexError:
+#				ybest = ysort # if ysort is shorter than n, get ysort
+#		
+#		yout = yclasses[ybest]
+#	#	catdat['skus'] = pd.Series(catdat['query'].values,index=catdat.index)
+#		for i in xrange(len(catdat)):
+#			skulist[catdat.index[i]] = yout[i].tolist()
+#		#yt = cls.predict(testfsets)
+#	
+#	print skulist
+#	return skulist
 ##################################################
 ## main function
 ##################################################
 def main():
 	start = timeit.default_timer()
 	print "read train data"
-	dataroot = "../data/train_part.csv"
+	dataroot = "../data/train.csv"
 
 	gcat_dic = groupByCat(dataroot)
 
@@ -165,9 +259,10 @@ def main():
 ## train NB classifiers
 ####################
 		#print "training data"
-		cls = naive_bayes.MultinomialNB(alpha=0.5)
+		cls = naive_bayes.MultinomialNB(alpha=0.1)
 		cls.fit(fset,skus)
 		cat_info[cat]['cls'] = cls
+	
 #
 ### release the memory
 #	gcat_dic = dict()
@@ -177,45 +272,12 @@ def main():
 ## preprocess test data
 	print "read test data"
 	dataroot = "../data/test_part.csv"
-	testdat = groupByCat(dataroot)
 
-	print type(testdat)
-
+	skulist = predict_testdata(cat_info,dataroot)
+	#skulist = predict_testdata_bycat(cat_info,dataroot)
+	print skulist
 ## predict by nb_dic
-	for cat in testdat:
-		catdat = preprocess(testdat[cat])
-		try:
-			catdic = cat_info[cat]['sku_info']
-		except KeyError:
-			print "Category %s is unseen!" % str(cat)
-			raise KeyError
-			sys.exit()
-
-		testfsets = get_test_featuresets(catdat,catdic)
-		cls = cat_info[cat]['cls']
-		yclasses =  cls.classes_
-		yall = cls.predict_proba(testfsets)
-		ysort = np.argsort(-yall)
-
-		n = 5
-		try:
-			ybest = ysort[:,:len(yclasses)] ## only one class
-		except IndexError:
-			try:
-				ybest = ysort[:,:n] ## get the most frequent n
-			except IndexError:
-				ybest = ysort # if ysort is shorter than n, get ysort
 		
-		yout = yclasses[ybest]
-		print yout,yout.shape
-		catdat['skus'] = pd.Series(catdat['query'].values,index=catdat.index)
-		for i in xrange(len(catdat)):
-			catdat['skus'].iloc[i] = yout[i]
-		#yt = cls.predict(testfsets)
-		print cat,yout
-		print catdat
-		
-
 ####################
 ## compute elapsed CPU time
 ####################
