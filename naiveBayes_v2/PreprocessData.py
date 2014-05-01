@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd                                                         #import pandas
 import re
 import sys
-
+from nltk.stem import WordNetLemmatizer
 ####################
 # preprocess the data
 ####################
@@ -22,7 +22,8 @@ def preprocess(dat):
 def preprocessQuery(train):
 ##### change all the letters to upper case
 	dat = (train['query'].apply(lambda x: x.lower())).values
-
+	wnl = WordNetLemmatizer()
+	lemmatize = wnl.lemmatize
 	for ind, item in enumerate(dat):
 		#litem = item.split()
 		#litem.sort()
@@ -34,9 +35,13 @@ def preprocessQuery(train):
 ### remove all the punctuation marks in string
 		item = re.sub(r'[^\w\s]','', item)
 ### break into list of words and then sort
-		r = re.compile("[0-9a-zA-Z]+")
+		#r = re.compile("[0-9a-zA-Z]+")
+		r = re.compile("[a-zA-Z]+|[0-9]+")
+
 		llitem = r.findall(item)
-		llitem.sort()
+### change nouns to single form
+		llitem = [lemmatize(item) for item in llitem]
+		#llitem.sort()
 #		ix = -1
 #		i360 = -1
 #		for i, c in enumerate(llitem):
