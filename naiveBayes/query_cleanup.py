@@ -46,6 +46,7 @@ def Spell_Check(check_word, known_word, max_distance):
 
 
 import pandas as pd
+import sys
 train = pd.read_csv("../data/train.csv")
 
 #clean up query
@@ -57,7 +58,6 @@ train['query'] = train['query'].apply(lambda x: re.sub(' +',' ',x),1)
 #creates a dictionary with key = sku and value is list of all words that come up in all queries for that sku
 big_dict = defaultdict(list)
 for i in range(len(train)):
-#for i in range(10000):
   sku = train.ix[i,'sku']
   txt = train.ix[i,'query']
   for w in txt.split():
@@ -67,5 +67,5 @@ for i in range(len(train)):
 dict2 = {}
 for sku in big_dict:
   dict2[sku] = Query_Summary(big_dict[sku])
-  dict2[sku].make_gold_list(2)
-  #print "sku:  %i, %s" % (sku, dict2[sku].gold_list)
+  dict2[sku].make_gold_list(2)    #makes a golden list based on a min frequency of 2
+print sys.getsizeof(dict2)
