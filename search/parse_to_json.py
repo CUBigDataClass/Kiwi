@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 documents = []
 filelist = glob.glob('../data/product_data/products/*')
 for filename in filelist:
-    print f
     f       = open(filename, 'r')
     soup    = BeautifulSoup(f.read())
     products = soup.findAll('product')
