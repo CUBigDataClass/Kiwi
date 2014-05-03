@@ -69,3 +69,8 @@ for sku in big_dict:
   dict2[sku] = Query_Summary(big_dict[sku])
   dict2[sku].make_gold_list(2)    #makes a golden list based on a min frequency of 2
 print sys.getsizeof(dict2)
+
+query = 'some text here'
+for i in query.split():
+  for w in dict2[sku].gold_list:
+    newword = Spell_Check(i,w,2)
