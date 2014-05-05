@@ -176,7 +176,12 @@ def testData(col4cls,coltest):
 				cls = pickle.load(r)
 		except IOError:
 			print "%s doesn't exist!" % clsout['cls']
-			raise IOError
+			raise 
+		except TypeError:
+			print "Category %s doesn't exist in training!" % cat
+			append(tuple(None))
+			continue
+			
 			
 		vec = cls['countvectorizor']
 		fset = vec.transform([words])
@@ -217,25 +222,27 @@ def main():
 
 	db = client['bigdata']
 
+####################
+## only change the following part!!!
 	#clsinfo = "clsinfo" ## unigram and bigram without google refine
 	#clsinfo = "clsinfo_googlerefine" ## unigram and bigram
-	train_name = "train_cv"
-	#test_name = "test_part"
-	test_name = "test_cv"
+	train_name = "train_part" ## collection name for train
+	#test_name = "test_part" ## collection name for test
+	test_name = "test_part"	## collection name for test
 
-	clsinfo = "clsinfo_cv"
-	clsdir = 'cls_cv/'
+	clsinfo = "clsinfo_part"  ## collection name for classifiers
+	clsdir = 'cls_part/' ## directory for storing classifiers
 	make_sure_path_exists(clsdir)
-
+####################
 	col4cls = db[clsinfo] ## collection for storing info for classifiers
 #######################
 ##### training data
 #######################
 
-	col4train = db[train_name]
-	#collection = db['train_googlerefine']
-	#clsdir = 'cls/'
-	trainData(col4train,col4cls,clsdir)
+#	col4train = db[train_name]
+#	#collection = db['train_googlerefine']
+#	#clsdir = 'cls/'
+#	trainData(col4train,col4cls,clsdir)
 
 ######################
 #### testing data
@@ -250,11 +257,11 @@ def main():
 #######################
 ##### check MAP
 #######################
-#	for i in xrange(len(ytrue)):
-#		yb = ybest[i]
-#		yt = ytrue[i]
-#		print yb,yt,Mean_Average_Precision([yt],[yb]),Max_Score([yt],[yb])
-#
+	for i in xrange(len(ytrue)):
+		yb = ybest[i]
+		yt = ytrue[i]
+		print yb,yt,Mean_Average_Precision([yt],[yb]),Max_Score([yt],[yb])
+
 	mapscore = Mean_Average_Precision(ytrue,ybest)
 	maxscore = Max_Score(ytrue,ybest)
 	print "Total MAP score is", mapscore
